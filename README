@@ -1,0 +1,9 @@
+  Here is a simple framework that I created during my 5th semester 
+at MIPT. It was created to solve the problem of processing the results 
+of an experiment (or analyzing a data set, if You like) like laboratory 
+work in physics. In addition to the main task, I used it to study 
+python on my own. The framework can be used as a module for writing 
+your own scripts or as a completed program, the operation of which is 
+set using configuration files. In the future, there will be a description 
+and examples of using this framework in real laboratory work. For now, 
+only comments in the code are available.

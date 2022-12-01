@@ -1,0 +1,96 @@
+#   Program operates with 'Values' and 'Namespaces'
+#   'Value' is pair of value and error (scalars and vectors are available)
+#   'Namespace' is big dictionary with 'Name': 'Value' pairs
+#   Each 'Project' (one YAML file) has local 'Namespace'
+#   Many 'Projects' can be connected with one global 'Namespace'
+#   At the start of processing 'Project', global 'Namespace' is imported
+#   At the end of processing (see 'exports') local 'Values' can be 
+# exported to global 'Namespace'
+plot: # Main plot parameters, can be ommited
+  title: 'Спектр для $Na^{22}$' # Title
+  ylabel: 'N, $с^{-1}$' # Y axis label
+  xlabel: 'E, кЭв' # X axis label
+files: # Optional list of files for import into namespace, for now only .csv
+  - 'na_22.csv'
+values: # List of values that should be added to the namespace
+  #   Here you can use mathematical operations in the python 
+  # language (sympy-compatible) with all values from the namespace
+  Time: # Name of value
+    val: 600 # Value
+    err: 0.5 # Error
+  KevPerCh: 
+    val: 0.7369 
+    err: 0.0017
+  KevOffset: 
+    val: -46.7
+    err: 1.4
+  E_mc2: 
+    val: 511 
+  E_Na_1_teor: 
+    val: 511
+  E_Na_2_teor: 
+    val: 1275
+  E_Na_1_rev_teor: # Here can be used mathematics formula
+    val: 'E_Na_1_teor / (1 + 2 * E_Na_1_teor / E_mc2)'
+  E_Na_2_rev_teor: # If error is ommited, it will be calulated (in formula case)
+    val: 'E_Na_2_teor / (1 + 2 * E_Na_2_teor / E_mc2)'
+  E_Na_1_compt_teor: 
+    val: 'E_Na_1_teor / (1 + E_Na_1_teor / (2 * E_mc2))'
+  E_Na_2_compt_teor: 
+    val: 'E_Na_2_teor / (1 + E_Na_2_teor / (2 * E_mc2))'
+  NaCounts: 
+    val: 'NaCounts' # Fomula with 'Values' from 'Namespace'
+    err: 'sqrt(NaCounts)' # Here is too
+data: # Data to plot and process
+  - ydata: # Y axis data, it is 'Value'
+      val: 'NaCounts / Time'
+    xdata: # X axis data, it is 'Value'
+      val: 'KevPerCh * NaChannel + KevOffset'
+    # Here is ommited some fields:
+    #   plot - dictionary of matplotlib.axes.Axes.errorbar kwargs
+    fit: # List of fits to build
+        # This is sympy-compatible formual
+        # All values from 'Namespace' cab be used
+      - func: 'a * exp(-log(2) * (x - E_Na_2) ** 2 / dE_Na_2 ** 2)'
+        # Name of independet variable in the formula
+        var: 'x'
+        # List of formula params that should be imported into local 'Namespace'
+        params: ['E_Na_2', 'dE_Na_2']
+        # Independent variable range in which compute fit
+        fit_range: [1200, 1340]
+        # Inital values of parameters
+        fit_guess: 
+          E_Na_2: 1270
+        # There are some ommited fields:
+        #   plot_params - Dictionary of matplotlib..axes.Axes.plot kwargs
+        #   fit_params  - Dictionary of scipy.optimize.curve_fit kwargs 
+        #   plot_range  - Independent variable range in which curve should be drawn
+      - func: 'a * exp(-log(2) * (x - E_Na_1) ** 2 / dE_Na_1 ** 2)'
+        var: 'x'
+        params: ['E_Na_1', 'dE_Na_1']
+        fit_range: [470, 550]
+        fit_guess:
+          E_Na_1: 510
+      - func: 'a * exp(-(x - E_Na_rev) ** 2 / b **  2)'
+        var: 'x'
+        params: ['E_Na_rev']
+        fit_range: [135, 225]
+        fit_guess:
+          E_Na_rev: 190
+      - func: 'a / (1 + exp((- x + E_Na_compt) / b)) + c'
+        var: 'x'
+        params: ['E_Na_compt']
+        fit_range: [290, 360]
+        fit_guess:
+          E_Na_compt: 320
+      - func: 'a * exp(-(x - E_Na_char) ** 2 / b **  2)'
+        var: 'x'
+        params: ['E_Na_char']
+        fit_range: [70, 85]
+        fit_guess:
+          E_Na_char: 80
+#   List of local 'Namespace' 'Values' that should be exported to global 'Namespace'
+#   'Projects' are processed one by one and each project have access to previous 'Project' 
+# 'Values' which was exported into global 'Namespace'
+exports: ['E_Na_2', 'dE_Na_2', 'E_Na_1', 'dE_Na_1', 'E_Na_rev', 'E_Na_compt', 'E_Na_char']
+# At the end of processing all 'Projects', global 'Namespace' are printed in the console
