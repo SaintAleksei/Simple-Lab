@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # TODO Add pretty printing of errors (including Schema)
-# TODO Force it work
+# TODO Desctiption/Comments
 
 import numpy as np
 import sympy
@@ -15,7 +15,15 @@ from collections import deque
 from json import dumps as json_dumps
 
 class SimplePlot:
+  '''Simple matplotlib.pyplot wrapper'''
+
   def __init__(self, params=(), kwparams={}):
+    '''Initialize instance
+
+    Arguments:
+      params - pyplot.subplots params
+      kwparams - pyplot.subplots kwargs'''
+
     fig, ax = plt.subplots(*params, **kwparams)
     self.ax = ax
     self.fig = fig
@@ -23,25 +31,54 @@ class SimplePlot:
     self.default_linestyles   = deque(['solid', 'dotted', 'dashed', 'dashdot'])
 
   def set_grid(self, xaxis, yaxis):
+    '''Grid initialization
+
+    Arguments:
+      xaxis - X axis sampling
+      yaxis - Y axis sampling
+
+    Sampling is accepted in format (start, end, major_ticks, minor_ticks)'''
+
     self.ax.set_xticks(np.linspace(xaxis[0], xaxis[1], xaxis[2] + 1))
-    self.ax.set_xticks(np.linspace(xaxis[0], xaxis[1], xaxis[2] * xaxis[3] + 1), minor=True)
+    self.ax.set_xticks(np.linspace(xaxis[0], xaxis[1],\
+                       xaxis[2] * xaxis[3] + 1), minor=True)
     self.ax.set_yticks(np.linspace(yaxis[0], yaxis[1], yaxis[2] + 1))
-    self.ax.set_yticks(np.linspace(yaxis[0], yaxis[1], yaxis[2] * yaxis[3] + 1), minor=True)
-    self.ax.grid(visible=True, which='major', color='k', linestyle='-', linewidth=1)
-    self.ax.grid(visible=True, which='minor', color='k', linestyle='--', linewidth=0.5)
+    self.ax.set_yticks(np.linspace(yaxis[0], yaxis[1],\
+                       yaxis[2] * yaxis[3] + 1), minor=True)
+    self.ax.grid(visible=True, which='major', color='k',\
+                 linestyle='-', linewidth=1)
+    self.ax.grid(visible=True, which='minor', color='k',\
+                 linestyle='--', linewidth=0.5)
 
   def plot_data(self, xdata, ydata, xerr=None, yerr=None, kwparams=None):
+    '''Plot data with errors
+
+    Arguments:
+      xdata    - X axis data
+      ydata    - Y axis data
+      xerr     - X axis data errors
+      yerr     - Y axis data errors
+      kwparams - matplotlib.axes.Axes.errorbar kwargs'''
+
     try:
       if kwparams is None:
         kwparams = self.data_default()
       to_return = self.ax.errorbar(xdata, ydata, xerr, yerr, **kwparams);
-      self.ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol= 2, fontsize='large')
+      self.ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),\
+                     ncol= 2, fontsize='large')
       return to_return
     except:
       print('Can\'t plot data')
       raise
     
   def plot_func(self, func, xrang, kwparams=None):
+    '''Plot function
+
+    Arguments:
+      func      - callable to plot
+      xrang     - tuple with plot range (x_start, x_end)
+      kwaparams - matplotlib.axes.Axes.plot kwargs'''
+
     try:
       if kwparams is None:
         kwparams = self.func_default()
@@ -49,13 +86,16 @@ class SimplePlot:
       x = np.linspace(xrang[0], xrang[1], 1000)
       y = func(x)
       to_return = self.ax.plot(x, y, markersize=0, **kwparams)
-      self.ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol= 2, fontsize='large')
+      self.ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),\
+                     ncol= 2, fontsize='large')
       return to_return
     except:
       print('Can\'t plot func')
       raise
 
   def data_default(self):
+    '''Default kwparams for plot_data'''
+
     markerstyle = self.default_markerstyles.pop()
     self.default_markerstyles.appendleft(markerstyle)
     return {
@@ -67,6 +107,8 @@ class SimplePlot:
     }
   
   def func_default(self):
+    '''Default kwparams for plot_func'''
+
     linestyle = self.default_linestyles.pop()
     self.default_linestyles.appendleft(linestyle)
     return {
@@ -77,9 +119,17 @@ class SimplePlot:
 
   @staticmethod
   def draw():
+    '''Almost useless wrapper :)'''
+
     plt.show()
 
 class Namespace:
+  ''' 'Namespace' of 'Values'
+  
+    It is reprsented in pairs of 'Name' : 'Value',
+  in fact, it is just little bit clever default 
+  python dictionary'''
+
   def __init__(self):
     self.__dict = {}
 
@@ -87,6 +137,7 @@ class Namespace:
     return self.__dict[key]
 
   def __setitem__(self, key, value):
+    '''Wrapper with type checking'''
     if type(value) is not Value:
       raise TypeError('Object of type \'Value\' required')
     self.__dict[key] = value
@@ -100,6 +151,10 @@ class Namespace:
     return new
 
   def to_json(self):
+    '''JSON serializer
+
+    Return text representation of 'Namespace' '''
+
     scalars = {}
     for k, v in self.__dict.items():
       if not v.is_vector():
@@ -107,7 +162,18 @@ class Namespace:
     return json_dumps(scalars, indent=4, sort_keys=True)
 
 class Value:
+  '''Representation of 'Value'
+  
+  'Value' consist of val (value itself) and error (error of value)'''
+
   def __init__(self, val, err=0.0):
+    '''Initialize instance
+
+    Arguments:
+      val - value itself (scalar or vector)
+      err - error of value (scalar or vector)
+    '''
+
     try:
       iter(val)
     except TypeError:
@@ -140,9 +206,14 @@ class Value:
     return '\n'.join(self.to_strings)
 
   def is_vector(self):
+    '''Check if 'Value' is vector'''
     return not self.__val.size == 1
 
   def to_strings(self):
+    '''Serialize 'Value' to strings
+
+    Return list of strings representing each value from 'Value' vector'''
+
     return [f'{val:.7e}+-{err:.7e}' for val, err in zip(self.__val, self.__err)]
 
   @property
@@ -155,6 +226,13 @@ class Value:
 
   @staticmethod
   def from_strings(strings):
+    '''Unserialize 'Value' from strings
+
+    Arguments:
+      strings - strings that shoud be unserialized
+
+    Return new unserialized 'Value' '''
+
     val = []
     err = []
     for s in strings:
@@ -174,6 +252,14 @@ class Value:
 
   @staticmethod
   def merge(left, right):
+    '''Merge two values
+
+    Arguments:
+      left - first 'Value' to merge
+      right - second 'Value' to merge
+
+    Return new merged 'Value' '''
+
     if type(left) is not Value or type(right) is not Value:
       raise TypeError('Objects of type \'Value\' required')
 
@@ -183,6 +269,14 @@ class Value:
 
   @staticmethod
   def slice(*args, rang):
+    '''Slice list of values
+
+    Arguments:
+      args - list of 'Values' to slice
+      rang - range values for slicing in format (start, end)
+
+    Return list of new sliced 'Values' '''
+
     new_vals = [[] for _ in range(len(args))]
     new_errs = [[] for _ in range(len(args))]
     try:
@@ -200,10 +294,22 @@ class Value:
       raise
 
 class SimpleLab:
+  '''Main API Class
+  
+  There a two independent ways of using it:
+     - Complete program. Just one call to SimpleLab.process_all
+      performs complete project. Ususaly with data from YAML file
+     - Python API. Dierct SimpleLab API using with appropiate input objects.
+
+  Of course, this ways can be mixed'''
+
+
+  # SimplePlot instance
   plot = None
+  # Global 'Namespace'
   namespace = Namespace()
 
-  # I used Schema for input validation in all SimpleLab methods
+  # I used Schema for input validation in all SimpleLab API
   schem = {}
   schem['plot'] = {
     Optional('title'): str,
@@ -260,31 +366,69 @@ class SimpleLab:
     Optional('funcs'): [schem['func']],
     Optional('exports'): [schem['export']]
   }
-    
-  def __init__(self, config):
-    '''Complete simple lab, usualy config comes from .yaml file'''
-    Schema(self.schem['config']).validate(config)
+
+  def __init__(self):
+    '''Instance initialization'''
 
     self.namespace = SimpleLab.namespace.copy()
+    
+  def process_all(self, config):
+    '''Perform complete project. Used when running as complete program
 
+    Argumets:
+      config - well-formed dictionary describing the project
+
+    Config consist of optional fields:
+      plot   - main plot parameters. See SimpleLab.process_plot for details
+      files  - list of .csv file to import into local 'Namespace'. 
+              See SimpleLab.process_file for details
+      values - 'Name' : 'Value' pairs. See SimpleLab.process_value for details
+      data   - list of 'data' units. See SimpleLab.process_data for details
+      funcs  - list of functions to plot. 
+              See SimpleLab.process_func for details
+
+    Config usually comes from YAML file'''
+
+    # config validation
+    Schema(self.schem['config']).validate(config)
+
+    # 'plot' field processing
     self.process_plot(config.get('plot', {}))
 
+    # 'files' field processing
     for file_name in config.get('files', []):
       self.process_file(file_name)
 
+    # 'values' field processing
     for k, v in config.get('values', {}).items():
       self.namespace[k] = self.process_value(v)
 
+    # 'data' field processing
     for data in config.get('data', []):
       self.process_data(data)
 
+    # 'funcs' field processing
     for func in config.get('funcs', []):
       self.process_func(func)
 
+    # 'exports' fielts processing
     for export in config.get('exports', []):
       self.process_export(export)
 
   def process_plot(self, plot):
+    '''Main plot parameters processing
+
+    Arguments:
+      plot - appropriate dictionary
+
+    Fields:
+      title  - main plot title
+      xlabel - X axis label
+      ylabel - Y axis label
+      grid   - see SimplePlot.set_grid for details
+
+    One SimpleLab instance have one plot instance'''
+
     Schema(self.schem['plot']).validate(plot)
 
     if self.plot is not None:
@@ -292,7 +436,8 @@ class SimpleLab:
 
     self.plot = SimplePlot()
     self.plot.ax.set_title(plot.get('title', ''), fontsize='xx-large')
-    self.plot.ax.set_xlabel(plot.get('xlabel', ''), fontsize='x-large', loc='right')
+    self.plot.ax.set_xlabel(plot.get('xlabel', ''),\
+                            fontsize='x-large', loc='right')
     self.plot.ax.set_ylabel(plot.get('ylabel', ''), fontsize='x-large',\
                             loc='top', rotation='horizontal')
     grid = plot.get('grid', None)
@@ -300,6 +445,17 @@ class SimpleLab:
       self.plot.set_grid(*grid)
 
   def process_data(self, data):
+    '''Data unit processing
+
+    Arguments:
+      data - appropriate dictionary
+
+    Fields:
+      xdata - X axis 'Value'. See SimpleLab.process_value for details
+      ydata - Y axis 'Value'. See SimpleLab.process_value for details
+      plot  - dictionaty with plot params. See SimplePlot.plot_data for details
+      fit   - fit unit. See SimpleLab.process_fit for details'''
+      
     Schema(self.schem['data']).validate(data)
 
     x_val = self.process_value(data['xdata'])
@@ -319,6 +475,15 @@ class SimpleLab:
       self.process_fit(fit, x_val, y_val)
 
   def process_file(self, file_name):
+    '''File processing
+
+    Arguments: 
+      file_name - name of file
+
+    Import vectors to the local 'Namespace' with default errors
+  
+    Only CSV format is available for now. See Helpers.parse_csv'''
+
     Schema(self.schem['file']).validate(file_name)
 
     dict_csv = Helpers.parse_csv(file_name)
@@ -326,6 +491,26 @@ class SimpleLab:
       self.namespace[k] = Value(v)
 
   def process_value(self, value):
+    '''Creating 'Value' from appropriate dictionary
+
+    Arguments:
+      value - appropriate dictionary
+  
+    Fields:
+      val - value representation
+      err - value representation. Optional
+
+      Value representation should be float, int, string of list of them.
+    In case with int or float it is value itself. In case of string it should
+    be formula that sympy can understand. Anything from local 'Namespace'
+    can be used in this formula. Formula calculation is performed by
+    Helpers.compute_value function. If err is ommited 'Value' error will
+    be default in case of float or int, and it will be computed using
+    error theory in case of sympy formula. If err is presented, is will be 
+    used as value representation for 'Value' error.
+
+    Return new 'Value' '''
+    
     Schema(self.schem['value']).validate(value)
 
     try:
@@ -382,6 +567,24 @@ class SimpleLab:
       raise
 
   def process_fit(self, fit, x_val, y_val):
+    '''Processing fit
+
+    Arguments:
+      fit   - appropriate dictionary
+      x_val - X axis 'Value'
+      y_val - Y axis 'Value' 
+
+    fit fields:
+      func - string representation of fit function in sympy format 
+      var  - name of independent variable in func
+      params - list of 'Names' of parameters that should be imported as
+              'Values' into the local 'Namespace'
+      fit_guess - guess of fit parameters. Sometimes it is necessary
+      fit_params - fit calculation parameters. See scipy.optimize.curve_fit
+      fit_range  - independent variable range at which fit should be computed
+      plot_params - fit plot parameters. See SimplePlot.plot_func
+      plot_range  - independent variable range aw which curve should be drawn'''
+    
     Schema(Value).validate(x_val)
     Schema(Value).validate(y_val)
     Schema(self.schem['fit']).validate(fit)
@@ -430,13 +633,29 @@ class SimpleLab:
       raise
 
   def process_export(self, export):
+    '''Export processing
+
+    Arguments:
+      export - 'Name' of 'Value' to export'''
+
     Schema(self.schem['export']).validate(export)
 
     SimpleLab.namespace[export] = self.namespace[export]
 
 class Helpers:
+  '''Helpfull functions'''
+
   @staticmethod
   def compute_value(expr, namespace=None):
+    '''Computing value
+
+    Arguments:
+      expr - string expression that can be passed to sympy.sympify
+      namespace - 'Namespace' with 'Values' which 'Names' can be 
+                 used in expr string
+
+    Return computeed 'Value' '''
+
     if namespace is None:
       namespace = Namespace()
 
@@ -486,6 +705,13 @@ class Helpers:
 
   @staticmethod
   def parse_csv(fname):
+    '''Simple CSV parser
+
+    Arguments:
+      fname - name of file
+
+    Return dictionary representation of CSV file'''
+
     with open(fname, 'r') as file_csv:
       reader = csv_reader(file_csv, delimiter=',')
       names = reader.__next__()
@@ -500,6 +726,7 @@ if __name__ == '__main__':
   for arg in sys_argv[1:]:
     with open(arg, 'r') as f:
       yaml_data = yaml_load(f)
-    SimpleLab(yaml_data)
+    lab = SimpleLab()
+    lab.process_all(yaml_data)
   print(SimpleLab.namespace.to_json())
   SimplePlot.draw()
